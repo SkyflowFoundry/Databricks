@@ -16,7 +16,7 @@ WITH grouped_data AS (
 ),
 detokenized_batches AS (
     SELECT
-        skyflow_bulk_detokenize(names, 'analyst') AS detokenized_names,
+        skyflow_bulk_detokenize(names, current_user()) AS detokenized_names,
         employee_ids,
         roles,
         departments,
