@@ -13,7 +13,7 @@ BEARER_TOKEN = "<TODO: SKYFLOW_API_KEY>"
 # Databricks SCIM API details
 DATABRICKS_INSTANCE = "https://<TODO: DATABRICKS_INSTNANCE_ID>.cloud.databricks.com" # e.g. xyz-abc12d34-567e
 SCIM_API_URL = f"{DATABRICKS_INSTANCE}/api/2.0/preview/scim/v2/Users"
-DATABRICKS_TOKEN = "<TODO: DATABRICKS_ACCESS_TOKEN>" # e.g. dapi0123456789abcdef0123456789abcdef
+DATABRICKS_TOKEN = "<TODO: DATABRICKS_ACCESS_TOKEN>" # e.g. dapi0123456789ab...
 
 # Mapping roles to redaction styles with multiple groups
 ROLE_TO_REDACTION = {
