@@ -209,6 +209,8 @@ The repository includes a pre-built customer insights dashboard that demonstrate
 
 ![databricks_dashboard](https://github.com/user-attachments/assets/f81227c5-fbbf-481c-b7dc-516f64ad6114)
 
+![image](https://github.com/user-attachments/assets/e789da4e-e4b7-4c9a-8c94-fbcbdd2937dd)
+
 Features:
 - Customer overview with detokenized PII
 - Spending analysis
