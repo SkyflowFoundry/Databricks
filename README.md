@@ -5,8 +5,25 @@ This repository contains a user-defined function that can be deployed within any
 
 Note: these examples are not an officially-supported product or recommended for production deployment without further review, testing, and hardening. Use with caution, this is sample code only.
 
-## Create and register the Skyflow UDF
-Start a new Notebook in Databricks, set the Notebook to SQL and copy/paste the below code after completing the TODOs.
+## Quick Start
+The repository includes a setup script that automates the deployment process. Simply run:
+
+```bash
+./setup.sh create <prefix>
+```
+
+This will:
+1. Create the detokenization function with your specified prefix
+2. Create a sample customer data table
+3. Create tokenization notebooks in your Databricks workspace
+4. Deploy a customer insights dashboard
+
+To remove all created resources:
+```bash
+./setup.sh destroy <prefix>
+```
+
+## Manual Setup
 
 ### Prerequisites
 
@@ -20,7 +37,18 @@ Start a new Notebook in Databricks, set the Notebook to SQL and copy/paste the b
 - Create a vault and relevant schema to hold your data
 - Copy your API key, Vault URL, and Vault ID
 
-#### SQL code
+### Configuration
+Copy config.sh.example to config.sh and fill in your configuration values:
+```bash
+cp config.sh.example config.sh
+```
+
+Edit config.sh to set:
+- Databricks host, token, and warehouse ID
+- Skyflow vault URL, ID, and bearer token
+- Group mappings for redaction levels
+
+### SQL Function
 To use this code in your own account, complete the TODOs in the sample below:
 
 ```sql
@@ -34,7 +62,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Skyflow API details
 SKYFLOW_API_URL = "https://<TODO: SKYFLOW_VAULT_URL>/v1/vaults/<TODO: SKYFLOW_VAULT_ID>/detokenize"
-BEARER_TOKEN = "<TODO: SKYFLOW_API_KEY>"
+BEARER_TOKEN = "<TODO: SKYFLOW_BEARER_TOKEN>"
 
 # Databricks SCIM API details
 DATABRICKS_INSTANCE = "https://<TODO: DATABRICKS_INSTNANCE_ID>.cloud.databricks.com" # e.g. xyz-abc12d34-567e
@@ -162,16 +190,7 @@ return bulk_detokenize(tokens, user_email)
 $$;
 ```
 
-## Trigger the Skyflow UDF
-Start a new Query or Dashboard in Databricks and copy/paste the below code after completing the TODOs.
-
-### Prerequisites
-
-- Insert a couple records in your Skyflow vault ensuring tokenization is enabled to receive back Skyflow tokens
-- Insert the resulting Skyflow tokens in your Databricks instance
-- Ensure your Databricks users are assigned to appropriate groups that match your data access policies
-
-#### SQL code
+## Example Usage
 The query below uses current_user() to automatically determine the appropriate redaction level based on the user's Databricks group memberships:
 
 ```sql
@@ -180,52 +199,72 @@ USE hive_metastore.default;
 WITH grouped_data AS (
     SELECT
         1 AS group_id,
-        COLLECT_LIST(name) AS names,
-        COLLECT_LIST(employee_id) AS employee_ids,
-        COLLECT_LIST(role) AS roles,
-        COLLECT_LIST(department) AS departments,
-        COLLECT_LIST(date_joined) AS date_joineds,
-        COLLECT_LIST(age) AS ages,
-        COLLECT_LIST(business_unit) AS business_units,
-        COLLECT_LIST(security_clearance) AS security_clearances
-    FROM employee_data
+        COLLECT_LIST(first_name) AS first_names,
+        COLLECT_LIST(last_name) AS last_names,
+        COLLECT_LIST(email) AS emails,
+        COLLECT_LIST(phone_number) AS phones,
+        COLLECT_LIST(address) AS addresses,
+        COLLECT_LIST(date_of_birth) AS dobs
+    FROM customer_data
     GROUP BY group_id
 ),
 detokenized_batches AS (
     SELECT
-        skyflow_bulk_detokenize(names, current_user()) AS detokenized_names,
-        employee_ids,
-        roles,
-        departments,
-        date_joineds,
-        ages,
-        business_units,
-        security_clearances
+        skyflow_bulk_detokenize(first_names, current_user()) AS detokenized_first_names,
+        skyflow_bulk_detokenize(last_names, current_user()) AS detokenized_last_names,
+        skyflow_bulk_detokenize(emails, current_user()) AS detokenized_emails,
+        skyflow_bulk_detokenize(phones, current_user()) AS detokenized_phones,
+        skyflow_bulk_detokenize(addresses, current_user()) AS detokenized_addresses,
+        skyflow_bulk_detokenize(dobs, current_user()) AS detokenized_dobs
     FROM grouped_data
 ),
 exploded_data AS (
     SELECT
-        employee_ids[pos] AS employee_id,
-        detokenized_names[pos] AS detokenized_name,
-        roles[pos] AS role,
-        departments[pos] AS department,
-        date_joineds[pos] AS date_joined,
-        ages[pos] AS age,
-        business_units[pos] AS business_unit,
-        security_clearances[pos] AS security_clearance
+        pos AS idx,
+        detokenized_first_names[pos] AS first_name,
+        detokenized_last_names[pos] AS last_name,
+        detokenized_emails[pos] AS email,
+        detokenized_phones[pos] AS phone_number,
+        detokenized_addresses[pos] AS address,
+        detokenized_dobs[pos] AS date_of_birth
     FROM detokenized_batches
-    LATERAL VIEW POSEXPLODE(detokenized_names) AS pos, detokenized_name
+    LATERAL VIEW POSEXPLODE(detokenized_first_names) AS pos, val
 )
 SELECT
-    detokenized_name as name,
-    role,
-    department,
-    date_joined,
-    age,
-    business_unit,
-    security_clearance
-FROM exploded_data;
+    c.customer_id,
+    e.first_name,
+    e.last_name,
+    e.email,
+    e.phone_number,
+    e.address,
+    e.date_of_birth,
+    c.signup_date,
+    c.last_login,
+    c.total_purchases,
+    c.total_spent,
+    c.loyalty_status,
+    c.preferred_language,
+    c.consent_marketing,
+    c.consent_data_sharing
+FROM customer_data c
+JOIN exploded_data e ON e.idx = CAST(REGEXP_EXTRACT(c.customer_id, '(\\d+)', 0) AS INT) - 1;
 ```
+
+## Customer Insights Dashboard
+The repository includes a pre-built dashboard that showcases the detokenization function in action. The dashboard provides:
+
+- Customer overview with detokenized PII fields
+- Spending distribution by loyalty status
+- Language preferences
+- Consent metrics
+- Customer acquisition trends
+
+The dashboard is automatically deployed when running `setup.sh create <prefix>`. You can access it at:
+```
+https://<your-databricks-host>/sql/dashboards/v3/<dashboard-id>
+```
+
+The dashboard URL will be displayed after running the setup script.
 
 # Learn more
 To learn more about Skyflow Detokenization APIs visit docs.skyflow.com.

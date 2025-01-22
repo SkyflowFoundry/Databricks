@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION default.skyflow_bulk_detokenize(tokens ARRAY<STRING>, user_email STRING)
+CREATE OR REPLACE FUNCTION default.<TODO: PREFIX>_skyflow_bulk_detokenize(tokens ARRAY<STRING>, user_email STRING)
 RETURNS ARRAY<STRING>
 LANGUAGE PYTHON
 AS $$
@@ -7,11 +7,11 @@ import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Skyflow API details
-SKYFLOW_API_URL = "https://<TODO: SKYFLOW_VAULT_URL>/v1/vaults/<TODO: SKYFLOW_VAULT_ID>/detokenize"
-BEARER_TOKEN = "<TODO: SKYFLOW_API_KEY>"
+SKYFLOW_API_URL = "<TODO: SKYFLOW_VAULT_URL>/v1/vaults/<TODO: SKYFLOW_VAULT_ID>/detokenize"
+BEARER_TOKEN = "<TODO: SKYFLOW_BEARER_TOKEN>"
 
 # Databricks SCIM API details
-DATABRICKS_INSTANCE = "https://<TODO: DATABRICKS_INSTNANCE_ID>.cloud.databricks.com" # e.g. xyz-abc12d34-567e
+DATABRICKS_INSTANCE = "<TODO: DATABRICKS_HOST>" # e.g. xyz-abc12d34-567e
 SCIM_API_URL = f"{DATABRICKS_INSTANCE}/api/2.0/preview/scim/v2/Users"
 DATABRICKS_TOKEN = "<TODO: DATABRICKS_ACCESS_TOKEN>" # e.g. dapi0123456789ab...
 
