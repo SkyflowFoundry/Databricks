@@ -39,20 +39,24 @@ INSERT INTO <TODO: PREFIX>_customer_data (
 )
 WITH numbered_rows AS (
   SELECT 
-    id, 
-    CASE MOD(id - 1, 4)
+    posexplode(array_repeat(1, 10)) AS (id, _)
+),
+base_data AS (
+  SELECT
+    id + 1 AS id,  -- Ensure IDs start from 1
+    CASE MOD(id, 4)
       WHEN 0 THEN 'Jonathan'
       WHEN 1 THEN 'Jessica'
       WHEN 2 THEN 'Michael'
-      ELSE 'Stephanie'
+      WHEN 3 THEN 'Stephanie'
     END AS first_name,
-    CASE MOD(id - 1, 4)
+    CASE MOD(id, 4)
       WHEN 0 THEN 'Anderson'
       WHEN 1 THEN 'Williams'
       WHEN 2 THEN 'Johnson'
-      ELSE 'Rodgers'
+      WHEN 3 THEN 'Rodgers'
     END AS last_name,
-    CASE MOD(id - 1, 10)
+    CASE MOD(id, 10)
       WHEN 0 THEN 'London, England, SW1A 1AA'
       WHEN 1 THEN 'Paris, France, 75001'
       WHEN 2 THEN 'Berlin, Germany, 10115'
@@ -62,43 +66,35 @@ WITH numbered_rows AS (
       WHEN 6 THEN 'Singapore, 238859'
       WHEN 7 THEN 'Dubai, UAE, 12345'
       WHEN 8 THEN 'São Paulo, Brazil, 01310-000'
-      ELSE 'Mumbai, India, 400001'
+      WHEN 9 THEN 'Mumbai, India, 400001'
     END AS city
-  FROM (
-    SELECT posexplode(array_repeat(1, 19)) AS (id, _)
-  )
+  FROM numbered_rows
 )
 SELECT
   CONCAT('CUST', LPAD(CAST(id AS STRING), 5, '0')) AS customer_id,
   first_name,
   last_name,
-  LOWER(CONCAT(first_name, '.', last_name, id, '@example.com')) AS email,
+  LOWER(CONCAT(first_name, '.', last_name, CAST(id AS STRING), '@example.com')) AS email,
   CONCAT('+1-', 
-    LPAD(CAST(MOD(id * 7 + 100, 900) + 100 AS STRING), 3, '0'), '-',
-    LPAD(CAST(MOD(id * 13 + 100, 900) + 100 AS STRING), 3, '0'), '-',
-    LPAD(CAST(MOD(id * 17 + 1000, 9000) + 1000 AS STRING), 4, '0')
+    LPAD(CAST(100 + MOD(id, 900) AS STRING), 3, '0'), '-',
+    LPAD(CAST(100 + MOD(id * 2, 900) AS STRING), 3, '0'), '-',
+    LPAD(CAST(1000 + MOD(id * 3, 9000) AS STRING), 4, '0')
   ) AS phone_number,
-  CONCAT(CAST(MOD(id * 11 + 100, 990) + 10 AS STRING), ' Main Street, ', city) AS address,
-  DATE_FORMAT(DATE_ADD('1950-01-01', (id - 1) * 730), 'yyyy-MM-dd') AS date_of_birth, -- Approximately 2 years between each birth date, spanning from 1950 onwards
-  DATE_ADD('2018-01-01', 
-    CAST(MOD(id * 17 + 100, 1095) AS INT) + -- Up to 3 years of random offset
-    (CAST(FLOOR((id - 1) / 5) AS INT) * 180) -- Additional 6-month shift per group of 5
-  ) AS signup_date,
-  DATE_ADD('2023-01-01',
-    CAST(MOD(id * 23 + 50, 60) AS INT) + -- Up to 2 months random recent activity
-    CAST(MOD(id * 13 + 30, 180) AS INT) -- Plus up to 6 months sporadic activity
-  ) AS last_login,
-  id * 2 AS total_purchases,
-  CAST(id * 100.50 AS DOUBLE) AS total_spent,
-  CASE MOD(id - 1, 4)
+  CONCAT(CAST(100 + MOD(id * 5, 900) AS STRING), ' Main Street, ', city) AS address,
+  DATE_FORMAT(DATE_ADD('1950-01-01', id * 365), 'yyyy-MM-dd') AS date_of_birth,
+  DATE_ADD('2018-01-01', id - 1) AS signup_date,
+  DATE_ADD('2023-01-01', id - 1) AS last_login,
+  id * 5 AS total_purchases,
+  CAST(id * 50.00 AS DOUBLE) AS total_spent,
+  CASE MOD(id, 4)
     WHEN 0 THEN 'Silver'
     WHEN 1 THEN 'Gold'
     WHEN 2 THEN 'Platinum'
-    ELSE 'Diamond'
+    WHEN 3 THEN 'Diamond'
   END AS loyalty_status,
-  CASE WHEN MOD(id, 2) = 0 THEN 'English' ELSE 'Spanish' END AS preferred_language,
-  CAST(MOD(id, 2) = 0 AS BOOLEAN) AS consent_marketing,
-  CAST(MOD(id, 3) = 0 AS BOOLEAN) AS consent_data_sharing,
+  CASE MOD(id, 2) WHEN 0 THEN 'English' ELSE 'Spanish' END AS preferred_language,
+  CASE MOD(id, 2) WHEN 0 THEN TRUE ELSE FALSE END AS consent_marketing,
+  CASE MOD(id, 3) WHEN 0 THEN TRUE ELSE FALSE END AS consent_data_sharing,
   current_timestamp() AS created_at,
   current_timestamp() AS updated_at
-FROM numbered_rows;
+FROM base_data;
