@@ -390,26 +390,51 @@ Usage:
 
 destroy_components() {
     echo "Destroying resources with prefix: ${PREFIX}"
+    local failed_deletions=()
+    local successful_deletions=()
 
     # Drop the function
     echo "Dropping detokenization function..."
     execute_sql "DROP FUNCTION IF EXISTS ${PREFIX}_skyflow_bulk_detokenize"
+    # Verify function deletion
+    if execute_sql "DESCRIBE FUNCTION ${PREFIX}_skyflow_bulk_detokenize" &>/dev/null; then
+        failed_deletions+=("Function: ${PREFIX}_skyflow_bulk_detokenize")
+    else
+        successful_deletions+=("Function: ${PREFIX}_skyflow_bulk_detokenize")
+    fi
 
     # Drop the table
     echo "Dropping sample table..."
     execute_sql "DROP TABLE IF EXISTS ${PREFIX}_customer_data"
+    # Verify table deletion
+    if execute_sql "DESCRIBE TABLE ${PREFIX}_customer_data" &>/dev/null; then
+        failed_deletions+=("Table: ${PREFIX}_customer_data")
+    else
+        successful_deletions+=("Table: ${PREFIX}_customer_data")
+    fi
 
     # Delete notebooks
     echo "Deleting notebooks..."
-    curl -X POST "${DATABRICKS_HOST}/api/2.0/workspace/delete" \
-        -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
-        -H "Content-Type: application/json" \
-        -d "{\"path\": \"/Workspace/Shared/${PREFIX}_tokenize_table\", \"recursive\": true}"
-    
-    curl -X POST "${DATABRICKS_HOST}/api/2.0/workspace/delete" \
-        -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
-        -H "Content-Type: application/json" \
-        -d "{\"path\": \"/Workspace/Shared/${PREFIX}_call_tokenize_table\", \"recursive\": true}"
+    local notebook_paths=("/Workspace/Shared/${PREFIX}_tokenize_table" "/Workspace/Shared/${PREFIX}_call_tokenize_table")
+    for notebook_path in "${notebook_paths[@]}"; do
+        echo "Deleting notebook: ${notebook_path}"
+        local response=$(curl -s -X POST "${DATABRICKS_HOST}/api/2.0/workspace/delete" \
+            -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"path\": \"${notebook_path}\", \"recursive\": true}")
+        
+        # Verify notebook deletion by trying to get its info
+        local verify_response=$(curl -s -X GET "${DATABRICKS_HOST}/api/2.0/workspace/get-status" \
+            -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"path\": \"${notebook_path}\"}")
+        
+        if echo "$verify_response" | grep -q "error_code.*RESOURCE_DOES_NOT_EXIST"; then
+            successful_deletions+=("Notebook: ${notebook_path}")
+        else
+            failed_deletions+=("Notebook: ${notebook_path}")
+        fi
+    done
 
     # Delete dashboard
     echo "Deleting dashboard..."
@@ -434,10 +459,44 @@ print('\n'.join(ids))
             echo "Deleting dashboard with ID: ${dashboard_id}"
             curl -s -X DELETE "${DATABRICKS_HOST}/api/2.0/lakeview/dashboards/${dashboard_id}" \
                 -H "Authorization: Bearer ${DATABRICKS_TOKEN}"
+            
+            # Verify dashboard deletion
+            sleep 2  # Brief pause to allow deletion to propagate
+            local verify_dashboards=$(curl -s -X GET "${DATABRICKS_HOST}/api/2.0/lakeview/dashboards" \
+                -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
+                -H "Content-Type: application/json")
+            
+            local still_exists=$(echo "$verify_dashboards" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+dashboard_id = '${dashboard_id}'
+exists = any(d['dashboard_id'] == dashboard_id for d in data.get('dashboards', []))
+print('true' if exists else 'false')
+")
+            
+            if [[ "$still_exists" == "false" ]]; then
+                successful_deletions+=("Dashboard: ID ${dashboard_id}")
+            else
+                failed_deletions+=("Dashboard: ID ${dashboard_id}")
+            fi
         fi
     done <<< "$matching_ids"
 
-    echo "Destroy complete!"
+    # Print summary
+    echo -e "\nDestroy Summary:"
+    if [[ ${#successful_deletions[@]} -gt 0 ]]; then
+        echo -e "\nSuccessfully deleted:"
+        printf '%s\n' "${successful_deletions[@]}"
+    fi
+    
+    if [[ ${#failed_deletions[@]} -gt 0 ]]; then
+        echo -e "\nFailed to delete:"
+        printf '%s\n' "${failed_deletions[@]}"
+        echo -e "\nWarning: Some resources could not be verified as deleted. They may require manual cleanup."
+        exit 1
+    else
+        echo -e "\nAll resources successfully deleted!"
+    fi
 }
 
 # Main logic

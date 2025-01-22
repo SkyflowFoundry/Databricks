@@ -13,8 +13,8 @@ DEFAULT_SKYFLOW_BEARER_TOKEN="sky-e1ff2-l06c91826bea4021a9bdacf7134e329a"
 
 # Group mappings for detokenization
 DEFAULT_PLAIN_TEXT_GROUPS="auditor"
-DEFAULT_MASKED_GROUPS="human_resources"
-DEFAULT_REDACTED_GROUPS="corporate_communications"
+DEFAULT_MASKED_GROUPS="customer_service"
+DEFAULT_REDACTED_GROUPS="marketing"
 
 # Apply any provided values, otherwise use defaults
 export DATABRICKS_HOST=${DATABRICKS_HOST:-$DEFAULT_DATABRICKS_HOST}

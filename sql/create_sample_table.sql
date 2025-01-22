@@ -79,9 +79,15 @@ SELECT
     LPAD(CAST(MOD(id * 17 + 1000, 9000) + 1000 AS STRING), 4, '0')
   ) AS phone_number,
   CONCAT(CAST(MOD(id * 11 + 100, 990) + 10 AS STRING), ' Main Street, ', city) AS address,
-  DATE_FORMAT(DATE_ADD('1980-01-01', (id - 1) * 7), 'yyyy-MM-dd') AS date_of_birth,
-  DATE_ADD('2020-01-01', (id - 1) * 3) AS signup_date,
-  DATE_ADD('2024-01-01', id - 1) AS last_login,
+  DATE_FORMAT(DATE_ADD('1950-01-01', (id - 1) * 730), 'yyyy-MM-dd') AS date_of_birth, -- Approximately 2 years between each birth date, spanning from 1950 onwards
+  DATE_ADD('2018-01-01', 
+    CAST(MOD(id * 17 + 100, 1095) AS INT) + -- Up to 3 years of random offset
+    (CAST(FLOOR((id - 1) / 5) AS INT) * 180) -- Additional 6-month shift per group of 5
+  ) AS signup_date,
+  DATE_ADD('2023-01-01',
+    CAST(MOD(id * 23 + 50, 60) AS INT) + -- Up to 2 months random recent activity
+    CAST(MOD(id * 13 + 30, 180) AS INT) -- Plus up to 6 months sporadic activity
+  ) AS last_login,
   id * 2 AS total_purchases,
   CAST(id * 100.50 AS DOUBLE) AS total_spent,
   CASE MOD(id - 1, 4)
