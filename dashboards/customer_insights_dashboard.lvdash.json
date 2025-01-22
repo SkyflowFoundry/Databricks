@@ -1,0 +1,285 @@
+{
+    "datasets": [{
+        "name": "<TODO: PREFIX>_customer_dataset",
+        "displayName": "Customer Data",
+        "query": "USE hive_metastore.default;\n\nWITH grouped_data AS (\n    SELECT\n        1 AS group_id,\n        COLLECT_LIST(first_name) AS first_names,\n        COLLECT_LIST(last_name) AS last_names,\n        COLLECT_LIST(email) AS emails,\n        COLLECT_LIST(phone_number) AS phones,\n        COLLECT_LIST(address) AS addresses,\n        COLLECT_LIST(date_of_birth) AS dobs\n    FROM <TODO: PREFIX>_customer_data\n    GROUP BY group_id\n),\ndetokenized_batches AS (\n    SELECT\n        <TODO: PREFIX>_skyflow_bulk_detokenize(first_names, current_user()) AS detokenized_first_names,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(last_names, current_user()) AS detokenized_last_names,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(emails, current_user()) AS detokenized_emails,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(phones, current_user()) AS detokenized_phones,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(addresses, current_user()) AS detokenized_addresses,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(dobs, current_user()) AS detokenized_dobs\n    FROM grouped_data\n),\nexploded_data AS (\n    SELECT\n        pos AS idx,\n        detokenized_first_names[pos] AS first_name,\n        detokenized_last_names[pos] AS last_name,\n        detokenized_emails[pos] AS email,\n        detokenized_phones[pos] AS phone_number,\n        detokenized_addresses[pos] AS address,\n        detokenized_dobs[pos] AS date_of_birth\n    FROM detokenized_batches\n    LATERAL VIEW POSEXPLODE(detokenized_first_names) AS pos, val\n)\nSELECT\n    c.customer_id,\n    e.first_name,\n    e.last_name,\n    e.email,\n    e.phone_number,\n    e.address,\n    e.date_of_birth,\n    c.signup_date,\n    c.last_login,\n    c.total_purchases,\n    c.total_spent,\n    c.loyalty_status,\n    c.preferred_language,\n    c.consent_marketing,\n    c.consent_data_sharing\nFROM <TODO: PREFIX>_customer_data c\nJOIN exploded_data e ON e.idx = CAST(REGEXP_EXTRACT(c.customer_id, '(\\\\d+)', 0) AS INT) - 1;"
+    }],
+    "pages": [{
+        "name": "customer_insights",
+        "displayName": "Customer Insights Dashboard",
+        "layout": [
+            {
+                "widget": {
+                    "name": "header",
+                    "textbox_spec": "\n# Customer Data Platform Insights\nSecure view of customer data with tokenized PII fields\n"
+                },
+                "position": {"x": 0, "y": 0, "width": 12, "height": 1}
+            },
+            {
+                "widget": {
+                    "name": "customer_overview",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "customer_id", "expression": "`customer_id`"},
+                                {"name": "name", "expression": "CONCAT(`first_name`, ' ', `last_name`)"},
+                                {"name": "email", "expression": "`email`"},
+                                {"name": "total_spent", "expression": "`total_spent`"},
+                                {"name": "total_purchases", "expression": "`total_purchases`"},
+                                {"name": "loyalty_status", "expression": "`loyalty_status`"},
+                                {"name": "last_login", "expression": "`last_login`"}
+                            ]
+                        }
+                    }],
+                    "spec": {
+                        "version": 1,
+                        "widgetType": "table",
+                        "encodings": {
+                            "columns": [
+                                {"fieldName": "customer_id", "title": "ID", "type": "string"},
+                                {"fieldName": "name", "title": "Customer Name", "type": "string"},
+                                {"fieldName": "email", "title": "Email", "type": "string"},
+                                {"fieldName": "total_spent", "title": "Total Spent", "type": "number", "numberFormat": "$#,##0.00"},
+                                {"fieldName": "total_purchases", "title": "Orders", "type": "number"},
+                                {"fieldName": "loyalty_status", "title": "Loyalty Tier", "type": "string"},
+                                {"fieldName": "last_login", "title": "Last Activity", "type": "datetime"}
+                            ]
+                        }
+                    }
+                },
+                "position": {"x": 0, "y": 1, "width": 12, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "spending_distribution",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "avg_spent", "expression": "AVG(`total_spent`)"},
+                                {"name": "total_customers", "expression": "COUNT(*)"},
+                                {"name": "loyalty_status", "expression": "`loyalty_status`"}
+                            ],
+                            "groupBy": ["loyalty_status"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "bar",
+                        "encodings": {
+                            "x": {"fieldName": "loyalty_status", "title": "Loyalty Status"},
+                            "y": {"fieldName": "avg_spent", "title": "Average Spent", "numberFormat": "$#,##0.00"}
+                        },
+                        "frame": {"title": "Average Customer Value by Loyalty Status"}
+                    }
+                },
+                "position": {"x": 0, "y": 5, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "language_distribution",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "count", "expression": "COUNT(*)"},
+                                {"name": "preferred_language", "expression": "`preferred_language`"}
+                            ],
+                            "groupBy": ["preferred_language"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "pie",
+                        "encodings": {
+                            "angle": {"fieldName": "count", "title": "Customers"},
+                            "color": {"fieldName": "preferred_language", "title": "Language"}
+                        },
+                        "frame": {"title": "Language Preferences"}
+                    }
+                },
+                "position": {"x": 6, "y": 5, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "consent_metrics",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "consent_type", "expression": "'Marketing'"},
+                                {"name": "consent_rate", "expression": "SUM(CASE WHEN consent_marketing THEN 1 ELSE 0 END) / COUNT(*) * 100"},
+                                {"name": "total_customers", "expression": "COUNT(*)"}
+                            ],
+                            "unionAll": [
+                                {
+                                    "fields": [
+                                        {"name": "consent_type", "expression": "'Data Sharing'"},
+                                        {"name": "consent_rate", "expression": "SUM(CASE WHEN consent_data_sharing THEN 1 ELSE 0 END) / COUNT(*) * 100"},
+                                        {"name": "total_customers", "expression": "COUNT(*)"}
+                                    ]
+                                }
+                            ]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "bar",
+                        "encodings": {
+                            "x": {"fieldName": "consent_type", "title": "Consent Type"},
+                            "y": {"fieldName": "consent_rate", "title": "Consent Rate (%)", "numberFormat": "#.#%"}
+                        },
+                        "frame": {"title": "Customer Consent Rates"}
+                    }
+                },
+                "position": {"x": 0, "y": 9, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "signup_trend",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "signup_month", "expression": "DATE_TRUNC('MONTH', signup_date)"},
+                                {"name": "new_customers", "expression": "COUNT(*)"}
+                            ],
+                            "groupBy": ["signup_month"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "line",
+                        "encodings": {
+                            "x": {"fieldName": "signup_month", "title": "Month"},
+                            "y": {"fieldName": "new_customers", "title": "New Customers"}
+                        },
+                        "frame": {"title": "Customer Acquisition Trend"}
+                    }
+                },
+                "position": {"x": 6, "y": 9, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "avg_order_value",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "avg_order", "expression": "total_spent / NULLIF(total_purchases, 0)"},
+                                {"name": "customer_count", "expression": "COUNT(*)"},
+                                {"name": "order_range", "expression": "CASE WHEN total_spent / NULLIF(total_purchases, 0) < 50 THEN 'Under $50' WHEN total_spent / NULLIF(total_purchases, 0) < 100 THEN '$50-$100' WHEN total_spent / NULLIF(total_purchases, 0) < 200 THEN '$100-$200' ELSE 'Over $200' END"}
+                            ],
+                            "groupBy": ["order_range"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "bar",
+                        "encodings": {
+                            "x": {"fieldName": "order_range", "title": "Order Value Range"},
+                            "y": {"fieldName": "customer_count", "title": "Number of Customers"}
+                        },
+                        "frame": {"title": "Average Order Value Distribution"}
+                    }
+                },
+                "position": {"x": 0, "y": 13, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "activity_heatmap",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "hour", "expression": "HOUR(last_login)"},
+                                {"name": "day", "expression": "DAYNAME(last_login)"},
+                                {"name": "count", "expression": "COUNT(*)"}
+                            ],
+                            "groupBy": ["hour", "day"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "heatmap",
+                        "encodings": {
+                            "x": {"fieldName": "hour", "title": "Hour of Day"},
+                            "y": {"fieldName": "day", "title": "Day of Week"},
+                            "color": {"fieldName": "count", "title": "Active Users"}
+                        },
+                        "frame": {"title": "Customer Activity Patterns"}
+                    }
+                },
+                "position": {"x": 6, "y": 13, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "customer_ltv",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "cohort", "expression": "DATE_TRUNC('MONTH', signup_date)"},
+                                {"name": "avg_ltv", "expression": "AVG(total_spent)"},
+                                {"name": "cohort_size", "expression": "COUNT(*)"}
+                            ],
+                            "groupBy": ["cohort"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "scatter",
+                        "encodings": {
+                            "x": {"fieldName": "cohort", "title": "Signup Cohort"},
+                            "y": {"fieldName": "avg_ltv", "title": "Average Customer LTV", "numberFormat": "$#,##0.00"},
+                            "size": {"fieldName": "cohort_size", "title": "Cohort Size"}
+                        },
+                        "frame": {"title": "Customer Lifetime Value by Cohort"}
+                    }
+                },
+                "position": {"x": 0, "y": 17, "width": 6, "height": 4}
+            },
+            {
+                "widget": {
+                    "name": "loyalty_funnel",
+                    "queries": [{
+                        "name": "main_query",
+                        "query": {
+                            "datasetName": "<TODO: PREFIX>_customer_dataset",
+                            "fields": [
+                                {"name": "loyalty_status", "expression": "`loyalty_status`"},
+                                {"name": "customer_count", "expression": "COUNT(*)"},
+                                {"name": "avg_purchases", "expression": "AVG(total_purchases)"},
+                                {"name": "retention_rate", "expression": "COUNT(CASE WHEN DATEDIFF(NOW(), last_login) < 30 THEN 1 END) * 100.0 / COUNT(*)"}
+                            ],
+                            "groupBy": ["loyalty_status"]
+                        }
+                    }],
+                    "spec": {
+                        "version": 3,
+                        "widgetType": "funnel",
+                        "encodings": {
+                            "step": {"fieldName": "loyalty_status", "title": "Loyalty Tier"},
+                            "value": {"fieldName": "customer_count", "title": "Customers"},
+                            "tooltip": [
+                                {"fieldName": "avg_purchases", "title": "Avg Orders", "numberFormat": "#,##0.0"},
+                                {"fieldName": "retention_rate", "title": "30-Day Retention", "numberFormat": "#.#%"}
+                            ]
+                        },
+                        "frame": {"title": "Customer Loyalty Distribution"}
+                    }
+                },
+                "position": {"x": 6, "y": 17, "width": 6, "height": 4}
+            }
+        ]
+    }]
+}
