@@ -1,11 +1,12 @@
-# Skyflow for Databricks: Bulk Detokenization UDF
+# Skyflow for Databricks: PII & Sensitive Data Protection
 
-This solution provides a secure way to detokenize sensitive data in Databricks tables using Skyflow's detokenization service. By implementing a user-defined function (UDF) that integrates with Skyflow's API, organizations can efficiently retrieve original PII data while maintaining security through role-based access control.
+This solution provides secure data tokenization and detokenization capabilities in Databricks to protect PII and other sensitive data using Skyflow's Data Privacy Vault services. By implementing user-defined functions (UDFs) that integrate with Skyflow's API, organizations can efficiently protect sensitive data through tokenization and retrieve original PII data while maintaining security through role-based access control.
 
 ## Table of Contents
 - [Key Benefits](#key-benefits)
 - [Architecture](#architecture)
 - [Flow Diagrams](#flow-diagrams)
+  - [Tokenization Flow](#tokenization-flow)
   - [Detokenization Flow](#detokenization-flow)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
@@ -21,29 +22,48 @@ This solution provides a secure way to detokenize sensitive data in Databricks t
 
 ## Key Benefits
 
-- **Efficient Processing**: Bulk detokenization with multi-threaded processing
+- **Comprehensive Data Protection**: Both tokenization and detokenization capabilities
+- **Efficient Processing**: Bulk operations with multi-threaded processing
 - **Role-Based Access**: Automatic redaction based on user group membership
-- **High Performance**: Processes data in configurable chunks of 25 tokens
-- **Seamless Integration**: Native Databricks UDF for easy implementation
+- **High Performance**: Processes data in configurable chunks of 25 records
+- **Seamless Integration**: Native Databricks UDFs for easy implementation
 - **Secure**: Comprehensive error handling and role-based access control
 
 ## Architecture
 
 The solution consists of several components:
 
-1. **Databricks UDF**: A Python-based user-defined function that:
-   - Handles bulk detokenization requests
-   - Implements role-based access control via Databricks SCIM API
-   - Manages concurrent processing with ThreadPoolExecutor
-   - Interfaces with Skyflow's API
-   - Supports multiple redaction levels
+1. **Databricks UDFs**: Python-based user-defined functions that:
+   - Handle bulk tokenization and detokenization requests
+   - Implement role-based access control via Databricks SCIM API
+   - Manage concurrent processing with ThreadPoolExecutor
+   - Interface with Skyflow's API
+   - Support multiple redaction levels for detokenization
 
 2. **Integration Points**:
    - Databricks SCIM API for user group management
-   - Skyflow API for secure detokenization
+   - Skyflow API for secure tokenization and detokenization
    - Native SQL interface for querying data
 
 ## Flow Diagrams
+
+### Tokenization Flow
+
+```mermaid
+sequenceDiagram
+    participant SQL as SQL Query
+    participant UDF as Tokenize UDF
+    participant SF as Skyflow API
+
+    SQL->>UDF: Call bulk_tokenize function
+    
+    loop For each batch of 25 records
+        UDF->>SF: Request tokenization
+        SF-->>UDF: Return token values
+    end
+    
+    UDF-->>SQL: Return combined results
+```
 
 ### Detokenization Flow
 
@@ -73,15 +93,17 @@ sequenceDiagram
 
 ## Features
 
-- **Efficient Processing**: 
+- **Data Protection**: 
+  - Tokenization of sensitive data
+  - Detokenization with role-based access
   - Multi-threaded batch processing
-  - Configurable batch sizes (default: 25 tokens)
+  - Configurable batch sizes (default: 25 records)
   - Concurrent request handling
   - Automatic batch management
 
 - **Security**:
   - Role-based access control (RBAC) via Databricks groups
-  - Multiple redaction levels:
+  - Multiple redaction levels for detokenization:
     - PLAIN_TEXT: Full data access
     - MASKED: Partially redacted data
     - REDACTED: Fully redacted data
@@ -92,6 +114,7 @@ sequenceDiagram
   - Support for multiple PII columns
   - Custom redaction mapping
   - Real-time processing
+  - Bulk operations for both tokenization and detokenization
 
 ## Prerequisites
 
@@ -112,7 +135,7 @@ sequenceDiagram
    ./setup.sh create <prefix>
    ```
    This automatically:
-   - Creates the detokenization function
+   - Creates the tokenization and detokenization functions
    - Sets up a sample customer table
    - Deploys example notebooks
    - Installs a customer insights dashboard
@@ -129,6 +152,27 @@ sequenceDiagram
 
 ## Usage Examples
 
+### Tokenization
+```sql
+USE hive_metastore.default;
+
+WITH grouped_data AS (
+    SELECT
+        1 AS group_id,
+        COLLECT_LIST(first_name) AS first_names,
+        COLLECT_LIST(last_name) AS last_names,
+        COLLECT_LIST(email) AS emails
+    FROM raw_customer_data
+    GROUP BY group_id
+)
+SELECT
+    skyflow_bulk_tokenize(first_names) AS tokenized_first_names,
+    skyflow_bulk_tokenize(last_names) AS tokenized_last_names,
+    skyflow_bulk_tokenize(emails) AS tokenized_emails
+FROM grouped_data;
+```
+
+### Detokenization
 ```sql
 USE hive_metastore.default;
 
@@ -159,15 +203,18 @@ SELECT * FROM detokenized_batches;
 ├── setup.sh              # Deployment script
 ├── dashboards/           # Pre-built dashboards
 ├── notebooks/            # Example notebooks
+│   ├── notebook_tokenize_table.ipynb        # Tokenization examples
+│   └── notebook_call_tokenize_table.ipynb   # Tokenization usage
 ├── python/              # Python source code
 └── sql/                 # SQL definitions
 ```
 
 ## Error Handling
 
-The UDF implements comprehensive error handling:
+The UDFs implement comprehensive error handling:
 
 - **Input Validation**:
+  - Data format verification
   - Token format verification
   - User authentication checks
   - Group membership validation
@@ -186,7 +233,8 @@ The UDF implements comprehensive error handling:
 
 1. **Local Testing**:
    ```python
-   # Test the UDF locally
+   # Test the UDFs locally
+   python python/test_tokenize.py
    python python/test_detokenize.py
    ```
 
