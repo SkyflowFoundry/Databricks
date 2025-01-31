@@ -31,26 +31,47 @@ prompt_for_config() {
     
     # Databricks settings
     echo -e "\nDatabricks Configuration:"
+    if [[ -z "$DEFAULT_DATABRICKS_HOST" ]]; then
+        echo "Format example: https://dbc-xxxxxxxx-xxxx.cloud.databricks.com"
+    fi
     read -p "Databricks Host URL [${DEFAULT_DATABRICKS_HOST}]: " input
     export DATABRICKS_HOST=${input:-$DEFAULT_DATABRICKS_HOST}
     
+    if [[ -z "$DEFAULT_DATABRICKS_TOKEN" ]]; then
+        echo "Format example: dapixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    fi
     read -p "Databricks Access Token [${DEFAULT_DATABRICKS_TOKEN}]: " input
     export DATABRICKS_TOKEN=${input:-$DEFAULT_DATABRICKS_TOKEN}
     
+    if [[ -z "$DEFAULT_WAREHOUSE_ID" ]]; then
+        echo "Format example: xxxxxxxxxxxxxxxx"
+    fi
     read -p "SQL Warehouse ID [${DEFAULT_WAREHOUSE_ID}]: " input
     export WAREHOUSE_ID=${input:-$DEFAULT_WAREHOUSE_ID}
     
     # Skyflow settings
     echo -e "\nSkyflow Configuration:"
+    if [[ -z "$DEFAULT_SKYFLOW_VAULT_URL" ]]; then
+        echo "Format example: https://xxxxxxxxxxxx.vault.skyflowapis.com"
+    fi
     read -p "Skyflow Vault URL [${DEFAULT_SKYFLOW_VAULT_URL}]: " input
     export SKYFLOW_VAULT_URL=${input:-$DEFAULT_SKYFLOW_VAULT_URL}
     
+    if [[ -z "$DEFAULT_SKYFLOW_VAULT_ID" ]]; then
+        echo "Format example: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    fi
     read -p "Skyflow Vault ID [${DEFAULT_SKYFLOW_VAULT_ID}]: " input
     export SKYFLOW_VAULT_ID=${input:-$DEFAULT_SKYFLOW_VAULT_ID}
     
+    if [[ -z "$DEFAULT_SKYFLOW_ACCOUNT_ID" ]]; then
+        echo "Format example: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    fi
     read -p "Skyflow Account ID [${DEFAULT_SKYFLOW_ACCOUNT_ID}]: " input
     export SKYFLOW_ACCOUNT_ID=${input:-$DEFAULT_SKYFLOW_ACCOUNT_ID}
     
+    if [[ -z "$DEFAULT_SKYFLOW_BEARER_TOKEN" ]]; then
+        echo "Format example: sky-xxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    fi
     read -p "Skyflow Bearer Token [${DEFAULT_SKYFLOW_BEARER_TOKEN}]: " input
     export SKYFLOW_BEARER_TOKEN=${input:-$DEFAULT_SKYFLOW_BEARER_TOKEN}
     
