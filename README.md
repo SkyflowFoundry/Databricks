@@ -20,6 +20,12 @@ This solution provides secure data tokenization and detokenization capabilities 
 - [Support](#support)
 - [License](#license)
 
+## Demo
+
+This demo was featured in the 'From PII to GenAI: Architecting for Data Privacy & Security in 2025' webinar.
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/x2-wVW04njw/0.jpg)](https://www.youtube.com/watch?v=x2-wVW04njw&t=623s)
+
 ## Key Benefits
 
 - **Comprehensive Data Protection**: Both tokenization and detokenization capabilities
