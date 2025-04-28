@@ -1,0 +1,25 @@
+name: gitleaks-docker
+
+on:
+  pull_request:
+    branches:
+      - main
+      
+jobs:
+  build:
+    runs-on: ubuntu-latest
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run gitleaks-docker
+        run: |
+          docker pull zricethezav/gitleaks:latest
+          docker run -v ${{ github.workspace }}:/repo zricethezav/gitleaks:latest detect --source=/repo --verbose --exit-code=0 -f=json > gitleaks-results.json
+          cat gitleaks-results.json
+      
+      - name: Display Gitleaks JSON Output
+        run: |
+         echo "Displaying Gitleaks results..."
+         cat gitleaks-results.json
