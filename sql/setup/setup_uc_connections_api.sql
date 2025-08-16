@@ -43,13 +43,12 @@ RETURN
         get_json_object(
           get_json_object(
             http_request(
-              conn => 'skyflow_detokenize_conn',
+              conn => 'skyflow_conn',
               method => 'POST', 
-              path => '/detokenize',
+              path => '${SKYFLOW_VAULT_ID}/detokenize',
               headers => map(
                 'Content-Type', 'application/json',
-                'Accept', 'application/json',
-                'X-SKYFLOW-ACCOUNT-ID', '${SKYFLOW_ACCOUNT_ID}'
+                'Accept', 'application/json'
               ),
               json => concat(
                 '{"detokenizationParameters":[{"token":"',

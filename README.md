@@ -43,7 +43,6 @@ This solution provides secure data tokenization and detokenization capabilities 
    # Skyflow Configuration  
    SKYFLOW_VAULT_URL=https://your-vault.vault.skyflowapis.com
    SKYFLOW_PAT_TOKEN=eyJhbGci...your-pat-token
-   SKYFLOW_ACCOUNT_ID=your-account-id
    SKYFLOW_VAULT_ID=your-vault-id
    ```
 
@@ -300,7 +299,6 @@ WAREHOUSE_ID=abc123...
 # Skyflow Integration  
 SKYFLOW_VAULT_URL=https://vault.skyflow.com
 SKYFLOW_VAULT_ID=abc123...
-SKYFLOW_ACCOUNT_ID=acc123...
 SKYFLOW_PAT_TOKEN=sky123...
 SKYFLOW_TABLE=customer_data
 
