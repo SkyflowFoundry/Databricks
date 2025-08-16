@@ -54,11 +54,6 @@ load_config() {
         echo "✓ SKYFLOW_VAULT_ID loaded from .env.local"
     fi
     
-    export SKYFLOW_ACCOUNT_ID=${DEFAULT_SKYFLOW_ACCOUNT_ID}
-    if [[ -n "$SKYFLOW_ACCOUNT_ID" ]]; then
-        echo "✓ SKYFLOW_ACCOUNT_ID loaded from .env.local"
-    fi
-    
     export SKYFLOW_PAT_TOKEN=${DEFAULT_SKYFLOW_PAT_TOKEN}
     if [[ -n "$SKYFLOW_PAT_TOKEN" ]]; then
         echo "✓ SKYFLOW_PAT_TOKEN loaded from .env.local"
@@ -92,46 +87,25 @@ setup_uc_connections() {
     local sql_content=$(cat "sql/setup/create_uc_connections.sql")
     local processed_content=$(substitute_variables "$sql_content")
     
-    # Split into tokenization and detokenization connection statements
-    local tokenize_sql=$(echo "$processed_content" | sed -n '/CREATE CONNECTION.*skyflow_tokenize_conn/,/);/p')
-    local detokenize_sql=$(echo "$processed_content" | sed -n '/CREATE CONNECTION.*skyflow_detokenize_conn/,/);$/p')
-    
-    # Execute tokenization connection creation with detailed logging (direct API call to avoid catalog context)
-    echo "Executing tokenization connection SQL without catalog context..."
-    local tokenize_response=$(curl -s -X POST "${DATABRICKS_HOST}/api/2.0/sql/statements" \
+    # Execute consolidated connection creation with detailed logging (direct API call to avoid catalog context)
+    echo "Executing consolidated Skyflow connection SQL without catalog context..."
+    local connection_response=$(curl -s -X POST "${DATABRICKS_HOST}/api/2.0/sql/statements" \
         -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
         -H "Content-Type: application/json" \
-        -d "{\"statement\":$(echo "$tokenize_sql" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"warehouse_id\":\"${WAREHOUSE_ID}\"}")
+        -d "{\"statement\":$(echo "$processed_content" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"warehouse_id\":\"${WAREHOUSE_ID}\"}")
     
-    if echo "$tokenize_response" | grep -q '"state":"SUCCEEDED"'; then
-        echo "✓ Created UC tokenization connection: skyflow_tokenize_conn"
-        local tokenize_success=true
+    if echo "$connection_response" | grep -q '"state":"SUCCEEDED"'; then
+        echo "✓ Created UC consolidated connection: skyflow_conn"
+        local connection_success=true
     else
-        echo "❌ ERROR: Tokenization connection creation failed"
-        echo "SQL statement was: $tokenize_sql"
-        echo "Response: $tokenize_response"
-        local tokenize_success=false
+        echo "❌ ERROR: Consolidated connection creation failed"
+        echo "SQL statement was: $processed_content"
+        echo "Response: $connection_response"
+        local connection_success=false
     fi
     
-    # Execute detokenization connection creation with detailed logging (direct API call to avoid catalog context)
-    echo "Executing detokenization connection SQL without catalog context..."
-    local detokenize_response=$(curl -s -X POST "${DATABRICKS_HOST}/api/2.0/sql/statements" \
-        -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
-        -H "Content-Type: application/json" \
-        -d "{\"statement\":$(echo "$detokenize_sql" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"warehouse_id\":\"${WAREHOUSE_ID}\"}")
-    
-    if echo "$detokenize_response" | grep -q '"state":"SUCCEEDED"'; then
-        echo "✓ Created UC detokenization connection: skyflow_detokenize_conn"  
-        local detokenize_success=true
-    else
-        echo "❌ ERROR: Detokenization connection creation failed"
-        echo "SQL statement was: $detokenize_sql"
-        echo "Response: $detokenize_response"
-        local detokenize_success=false
-    fi
-    
-    # Verify connections actually exist after creation
-    echo "Verifying UC connections were actually created..."
+    # Verify connection actually exists after creation
+    echo "Verifying UC connection was actually created..."
     local actual_connections=$(curl -s -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
         "${DATABRICKS_HOST}/api/2.1/unity-catalog/connections" | \
         python3 -c "
@@ -144,27 +118,20 @@ except:
     print('')
 ")
     
-    if echo "$actual_connections" | grep -q "skyflow_tokenize_conn"; then
-        echo "✓ Verified skyflow_tokenize_conn exists"
+    if echo "$actual_connections" | grep -q "skyflow_conn"; then
+        echo "✓ Verified skyflow_conn exists"
     else
-        echo "❌ skyflow_tokenize_conn NOT FOUND after creation"
-        tokenize_success=false
+        echo "❌ skyflow_conn NOT FOUND after creation"
+        connection_success=false
     fi
     
-    if echo "$actual_connections" | grep -q "skyflow_detokenize_conn"; then
-        echo "✓ Verified skyflow_detokenize_conn exists"
-    else
-        echo "❌ skyflow_detokenize_conn NOT FOUND after creation"
-        detokenize_success=false
-    fi
-    
-    # Return success only if both connections succeeded
-    if [ "$tokenize_success" = true ] && [ "$detokenize_success" = true ]; then
-        echo "✓ Both UC connections created successfully via SQL"
+    # Return success only if connection succeeded
+    if [ "$connection_success" = true ]; then
+        echo "✓ UC consolidated connection created successfully via SQL"
         return 0
     else
-        echo "❌ Failed to create required UC connections"
-        echo "Both connections must be created successfully for setup to proceed"
+        echo "❌ Failed to create required UC connection"
+        echo "Connection must be created successfully for setup to proceed"
         exit 1
     fi
 }
@@ -192,13 +159,13 @@ setup_uc_secrets() {
         echo "✓ Created secrets scope successfully"
     fi
     
-    # Create individual secrets
+    # Create individual secrets (only ones actually needed for tokenization/detokenization)
     local secrets=(
         "skyflow_pat_token:${SKYFLOW_PAT_TOKEN}"
-        "skyflow_account_id:${SKYFLOW_ACCOUNT_ID}"
         "skyflow_vault_url:${SKYFLOW_VAULT_URL}"
         "skyflow_vault_id:${SKYFLOW_VAULT_ID}"
         "skyflow_table:${SKYFLOW_TABLE}"
+        "skyflow_table_column:${SKYFLOW_TABLE_COLUMN}"
     )
     
     for secret_pair in "${secrets[@]}"; do
@@ -410,7 +377,7 @@ except Exception as e:
     
     # Wait for run to complete
     echo "Waiting for tokenization to complete..."
-    local max_wait=300  # 5 minutes
+    local max_wait=900  # 15 minutes
     local wait_time=0
     
     while [[ $wait_time -lt $max_wait ]]; do
@@ -748,8 +715,8 @@ Resources created:
 3. Tokenization notebook:
    - /Workspace/Shared/${PREFIX}_tokenize_table (serverless-optimized)
 4. Unity Catalog Infrastructure:
-   - SQL-created HTTP connections: skyflow_tokenize_conn, skyflow_detokenize_conn
-   - UC-backed secrets scope: skyflow-secrets (contains PAT token, account ID, vault details)
+   - SQL-created HTTP connection: skyflow_conn (consolidated for tokenization and detokenization)
+   - UC-backed secrets scope: skyflow-secrets (contains PAT token, vault details)
    - Bearer token authentication with proper secret() references
 5. Pure SQL Functions:
    - ${PREFIX}_catalog.default.${PREFIX}_skyflow_uc_detokenize (direct Skyflow API via UC connections)
@@ -818,7 +785,7 @@ import json, sys
 try:
     data = json.load(sys.stdin)
     names = [conn['name'] for conn in data.get('connections', []) 
-             if conn['name'] in ['skyflow_tokenize_conn', 'skyflow_detokenize_conn']]
+             if conn['name'] in ['skyflow_conn', 'skyflow_tokenize_conn', 'skyflow_detokenize_conn']]
     print('\n'.join(names))
 except Exception as e:
     print(f'Error extracting names: {e}')
@@ -1009,9 +976,11 @@ import sys, json
 try:
     data = json.load(sys.stdin)
     connections = [c['name'] for c in data.get('connections', [])]
+    skyflow_conn_exists = 'skyflow_conn' in connections
+    # Also check for old connections in case of partial migration
     tokenize_exists = 'skyflow_tokenize_conn' in connections
     detokenize_exists = 'skyflow_detokenize_conn' in connections
-    print('true' if (tokenize_exists or detokenize_exists) else 'false')
+    print('true' if (skyflow_conn_exists or tokenize_exists or detokenize_exists) else 'false')
 except:
     print('false')
 ")
