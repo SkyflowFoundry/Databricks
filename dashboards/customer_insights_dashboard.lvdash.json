@@ -1,9 +1,9 @@
 {
     "datasets": [
         {
-            "name": "<TODO: PREFIX>_customer_dataset",
+            "name": "${PREFIX}_customer_dataset",
             "displayName": "Customer Data",
-            "query": "USE hive_metastore.default;\n\nWITH grouped_data AS (\n    SELECT\n        1 AS group_id,\n        COLLECT_LIST(first_name) AS first_names,\n        COLLECT_LIST(last_name) AS last_names,\n        COLLECT_LIST(email) AS emails,\n        COLLECT_LIST(phone_number) AS phones,\n        COLLECT_LIST(address) AS addresses,\n        COLLECT_LIST(date_of_birth) AS dobs\n    FROM <TODO: PREFIX>_customer_data\n    GROUP BY group_id\n),\ndetokenized_batches AS (\n    SELECT\n        <TODO: PREFIX>_skyflow_bulk_detokenize(first_names, current_user()) AS detokenized_first_names,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(last_names, current_user()) AS detokenized_last_names,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(emails, current_user()) AS detokenized_emails,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(phones, current_user()) AS detokenized_phones,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(addresses, current_user()) AS detokenized_addresses,\n        <TODO: PREFIX>_skyflow_bulk_detokenize(dobs, current_user()) AS detokenized_dobs\n    FROM grouped_data\n),\nexploded_data AS (\n    SELECT\n        pos AS idx,\n        detokenized_first_names[pos] AS first_name,\n        detokenized_last_names[pos] AS last_name,\n        detokenized_emails[pos] AS email,\n        detokenized_phones[pos] AS phone_number,\n        detokenized_addresses[pos] AS address,\n        detokenized_dobs[pos] AS date_of_birth\n    FROM detokenized_batches\n    LATERAL VIEW POSEXPLODE(detokenized_first_names) AS pos, val\n)\nSELECT\n    c.customer_id,\n    e.first_name,\n    e.last_name,\n    e.email,\n    e.phone_number,\n    e.address,\n    e.date_of_birth,\n    c.signup_date,\n    c.last_login,\n    c.total_purchases,\n    c.total_spent,\n    c.loyalty_status,\n    c.preferred_language,\n    c.consent_marketing,\n    c.consent_data_sharing\nFROM <TODO: PREFIX>_customer_data c\nJOIN exploded_data e ON e.idx = CAST(REGEXP_EXTRACT(c.customer_id, '(\\\\d+)', 0) AS INT) - 1;"
+            "query": "SELECT\n    customer_id,\n    first_name,\n    last_name,\n    email,\n    phone_number,\n    address,\n    date_of_birth,\n    signup_date,\n    last_login,\n    total_purchases,\n    total_spent,\n    loyalty_status,\n    preferred_language,\n    consent_marketing,\n    consent_data_sharing\nFROM ${PREFIX}_catalog.default.${PREFIX}_customer_data;"
         }
     ],
     "pages": [
@@ -30,7 +30,7 @@
                             {
                                 "name": "main_query",
                                 "query": {
-                                    "datasetName": "<TODO: PREFIX>_customer_dataset",
+                                    "datasetName": "${PREFIX}_customer_dataset",
                                     "fields": [
                                         {
                                             "name": "customer_id",
@@ -164,7 +164,7 @@
                             {
                                 "name": "main_query",
                                 "query": {
-                                    "datasetName": "<TODO: PREFIX>_customer_dataset",
+                                    "datasetName": "${PREFIX}_customer_dataset",
                                     "fields": [
                                         {
                                             "name": "loyalty_status",
@@ -221,7 +221,7 @@
                             {
                                 "name": "main_query",
                                 "query": {
-                                    "datasetName": "<TODO: PREFIX>_customer_dataset",
+                                    "datasetName": "${PREFIX}_customer_dataset",
                                     "fields": [
                                         {
                                             "name": "avg(total_purchases)",
@@ -278,7 +278,7 @@
                             {
                                 "name": "main_query",
                                 "query": {
-                                    "datasetName": "<TODO: PREFIX>_customer_dataset",
+                                    "datasetName": "${PREFIX}_customer_dataset",
                                     "fields": [
                                         {
                                             "name": "avg(total_purchases)",
@@ -335,7 +335,7 @@
                             {
                                 "name": "main_query",
                                 "query": {
-                                    "datasetName": "<TODO: PREFIX>_customer_dataset",
+                                    "datasetName": "${PREFIX}_customer_dataset",
                                     "fields": [
                                         {
                                             "name": "avg(total_purchases)",

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS <TODO: PREFIX>_customer_data (
+CREATE TABLE IF NOT EXISTS ${PREFIX}_customer_data (
     customer_id STRING NOT NULL,
     first_name STRING,
     last_name STRING,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS <TODO: PREFIX>_customer_data (
     updated_at TIMESTAMP
 );
 
-INSERT INTO <TODO: PREFIX>_customer_data (
+INSERT INTO ${PREFIX}_customer_data (
     customer_id,
     first_name,
     last_name,
@@ -39,7 +39,7 @@ INSERT INTO <TODO: PREFIX>_customer_data (
 )
 WITH numbered_rows AS (
   SELECT 
-    posexplode(array_repeat(1, 10)) AS (id, _)
+    posexplode(array_repeat(1, 50)) AS (id, _)
 ),
 base_data AS (
   SELECT
@@ -72,16 +72,35 @@ base_data AS (
 )
 SELECT
   CONCAT('CUST', LPAD(CAST(id AS STRING), 5, '0')) AS customer_id,
-  first_name,
-  last_name,
-  LOWER(CONCAT(first_name, '.', last_name, CAST(id AS STRING), '@example.com')) AS email,
-  CONCAT('+1-', 
-    LPAD(CAST(100 + MOD(id, 900) AS STRING), 3, '0'), '-',
-    LPAD(CAST(100 + MOD(id * 2, 900) AS STRING), 3, '0'), '-',
-    LPAD(CAST(1000 + MOD(id * 3, 9000) AS STRING), 4, '0')
-  ) AS phone_number,
-  CONCAT(CAST(100 + MOD(id * 5, 900) AS STRING), ' Main Street, ', city) AS address,
-  DATE_FORMAT(DATE_ADD('1950-01-01', id * 365), 'yyyy-MM-dd') AS date_of_birth,
+  -- Real PII data that will be tokenized
+  first_name AS first_name,
+  last_name AS last_name,
+  CONCAT(LOWER(first_name), '.', LOWER(last_name), '@example.com') AS email,
+  CASE MOD(id, 10)
+    WHEN 0 THEN '+1-555-0100'
+    WHEN 1 THEN '+1-555-0101' 
+    WHEN 2 THEN '+1-555-0102'
+    WHEN 3 THEN '+1-555-0103'
+    WHEN 4 THEN '+1-555-0104'
+    WHEN 5 THEN '+1-555-0105'
+    WHEN 6 THEN '+1-555-0106'
+    WHEN 7 THEN '+1-555-0107'
+    WHEN 8 THEN '+1-555-0108'
+    WHEN 9 THEN '+1-555-0109'
+  END AS phone_number,
+  city AS address,
+  CASE MOD(id, 10)
+    WHEN 0 THEN '1985-03-15'
+    WHEN 1 THEN '1990-07-22'
+    WHEN 2 THEN '1988-11-08'
+    WHEN 3 THEN '1992-01-30'
+    WHEN 4 THEN '1987-09-14'
+    WHEN 5 THEN '1991-05-03'
+    WHEN 6 THEN '1989-12-18'
+    WHEN 7 THEN '1993-04-25'
+    WHEN 8 THEN '1986-08-11'
+    WHEN 9 THEN '1994-06-07'
+  END AS date_of_birth,
   DATE_ADD('2018-01-01', id - 1) AS signup_date,
   DATE_ADD('2023-01-01', id - 1) AS last_login,
   id * 5 AS total_purchases,
