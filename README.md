@@ -279,8 +279,6 @@ The solution creates these UC resources:
 
 The included dashboard demonstrates real-time role-based data access with customer insights, purchase patterns, and consent tracking. The dashboard URL is provided after setup completion.
 
-![databricks_dashboard](https://github.com/user-attachments/assets/f81227c5-fbbf-481c-b7dc-516f64ad6114)
-
 ## Cleanup
 
 ```bash
