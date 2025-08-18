@@ -47,16 +47,16 @@ class EnvLoader:
             "vault_id": os.getenv("SKYFLOW_VAULT_ID"),
             "pat_token": os.getenv("SKYFLOW_PAT_TOKEN"),
             "table": os.getenv("SKYFLOW_TABLE"),
-            "table_column": os.getenv("SKYFLOW_TABLE_COLUMN", "pii_values"),
-            "batch_size": int(os.getenv("SKYFLOW_BATCH_SIZE", "25"))
+            "table_column": os.getenv("SKYFLOW_TABLE_COLUMN"),
+            "batch_size": os.getenv("SKYFLOW_BATCH_SIZE")
         }
     
-    def get_group_mappings(self) -> Dict[str, str]:
+    def get_group_mappings(self) -> Dict[str, Optional[str]]:
         """Extract group mappings for detokenization."""
         return {
-            "plain_text_groups": os.getenv("PLAIN_TEXT_GROUPS", "auditor"),
-            "masked_groups": os.getenv("MASKED_GROUPS", "customer_service"),
-            "redacted_groups": os.getenv("REDACTED_GROUPS", "marketing")
+            "plain_text_groups": os.getenv("PLAIN_TEXT_GROUPS"),
+            "masked_groups": os.getenv("MASKED_GROUPS"),
+            "redacted_groups": os.getenv("REDACTED_GROUPS")
         }
     
     def validate_config(self) -> Dict[str, bool]:

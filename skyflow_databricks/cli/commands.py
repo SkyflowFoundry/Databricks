@@ -153,7 +153,8 @@ class CreateCommand(BaseCommand):
         skyflow_config = {
             "pat_token": self.config.skyflow.pat_token,
             "vault_id": self.config.skyflow.vault_id,
-            "table": self.config.skyflow.table
+            "table": self.config.skyflow.table,
+            "table_column": self.config.skyflow.table_column
         }
         
         return secrets_manager.setup_skyflow_secrets(skyflow_config)
@@ -230,7 +231,7 @@ class CreateCommand(BaseCommand):
         """Execute the tokenization notebook."""
         try:
             # Get batch size from config
-            batch_size = getattr(self.config.skyflow, 'batch_size', 25)
+            batch_size = self.config.skyflow.batch_size
             return notebook_manager.execute_tokenization_notebook(self.prefix, batch_size)
         except Exception as e:
             console.print(f"✗ Tokenization execution failed: {e}")

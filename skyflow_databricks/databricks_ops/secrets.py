@@ -96,7 +96,7 @@ class SecretsManager:
             "skyflow_pat_token": skyflow_config["pat_token"],
             "skyflow_vault_id": skyflow_config["vault_id"],
             "skyflow_table": skyflow_config["table"],
-            "skyflow_table_column": skyflow_config.get("table_column", "pii_values")  # Skyflow table column name
+            "skyflow_table_column": skyflow_config["table_column"]
         }
         
         success = True

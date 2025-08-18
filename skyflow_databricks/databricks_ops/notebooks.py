@@ -60,7 +60,7 @@ class NotebookManager:
             return False
     
     def run_notebook_job(self, notebook_path: str, table_name: str, pii_columns: str, 
-                        batch_size: int = 25, timeout_minutes: int = 15) -> bool:
+                        batch_size: int, timeout_minutes: int = 15) -> bool:
         """Run a notebook as a serverless job using SDK methods."""
         try:
             # Use serverless compute with multi-task format
@@ -227,7 +227,7 @@ class NotebookManager:
         
         return True
     
-    def execute_tokenization_notebook(self, prefix: str, batch_size: int = 25) -> bool:
+    def execute_tokenization_notebook(self, prefix: str, batch_size: int) -> bool:
         """Execute the tokenization notebook with parameters."""
         workspace_path = f"/Shared/{prefix}_tokenize_table"
         table_name = f"{prefix}_catalog.default.{prefix}_customer_data"

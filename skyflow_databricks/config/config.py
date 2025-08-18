@@ -20,7 +20,8 @@ class SkyflowConfig(BaseModel):
     vault_id: str
     pat_token: str
     table: str
-    batch_size: int = 25  # Default batch size
+    table_column: str
+    batch_size: int
 
 
 class GroupConfig(BaseModel):
@@ -56,8 +57,10 @@ class SetupConfig:
         """Get Skyflow configuration.""" 
         if self._skyflow_config is None:
             config_data = self.env_loader.get_skyflow_config()
+            # Filter out None values, let Pydantic use defaults
+            filtered_data = {k: v for k, v in config_data.items() if v is not None}
             try:
-                self._skyflow_config = SkyflowConfig(**config_data)
+                self._skyflow_config = SkyflowConfig(**filtered_data)
             except ValidationError as e:
                 raise ValueError(f"Invalid Skyflow configuration: {e}")
         return self._skyflow_config
@@ -67,7 +70,9 @@ class SetupConfig:
         """Get group configuration."""
         if self._group_config is None:
             config_data = self.env_loader.get_group_mappings()
-            self._group_config = GroupConfig(**config_data)
+            # Filter out None values, let Pydantic use defaults
+            filtered_data = {k: v for k, v in config_data.items() if v is not None}
+            self._group_config = GroupConfig(**filtered_data)
         return self._group_config
     
     @property
@@ -103,6 +108,7 @@ class SetupConfig:
             "SKYFLOW_VAULT_URL": self.skyflow.vault_url,
             "SKYFLOW_VAULT_ID": self.skyflow.vault_id,
             "SKYFLOW_TABLE": self.skyflow.table,
+            "SKYFLOW_TABLE_COLUMN": self.skyflow.table_column,
             "PLAIN_TEXT_GROUPS": self.groups.plain_text_groups,
             "MASKED_GROUPS": self.groups.masked_groups,
             "REDACTED_GROUPS": self.groups.redacted_groups
