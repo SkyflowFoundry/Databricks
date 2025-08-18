@@ -1,4 +1,7 @@
-CREATE TABLE IF NOT EXISTS ${PREFIX}_customer_data (
+-- Set catalog context
+USE CATALOG ${PREFIX}_catalog;
+
+CREATE TABLE IF NOT EXISTS ${PREFIX}_catalog.default.${PREFIX}_customer_data (
     customer_id STRING NOT NULL,
     first_name STRING,
     last_name STRING,
@@ -18,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ${PREFIX}_customer_data (
     updated_at TIMESTAMP
 );
 
-INSERT INTO ${PREFIX}_customer_data (
+INSERT INTO ${PREFIX}_catalog.default.${PREFIX}_customer_data (
     customer_id,
     first_name,
     last_name,
@@ -39,7 +42,7 @@ INSERT INTO ${PREFIX}_customer_data (
 )
 WITH numbered_rows AS (
   SELECT 
-    posexplode(array_repeat(1, 50)) AS (id, _)
+    posexplode(array_repeat(1, 20)) AS (id, _)
 ),
 base_data AS (
   SELECT
