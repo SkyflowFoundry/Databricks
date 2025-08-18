@@ -13,7 +13,7 @@ A demonstration of this solution was featured in the 'From PII to GenAI: Archite
 1. **Clone and Configure**:
    ```bash
    git clone <repository>
-   cd databricks-skyflow-integration
+   cd Databricks
    cp .env.local.example .env.local
    ```
 
@@ -25,7 +25,7 @@ A demonstration of this solution was featured in the 'From PII to GenAI: Archite
    DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/your-warehouse-id
    
    # Skyflow Configuration  
-   SKYFLOW_VAULT_URL=https://your-vault.vault.skyflowapis.com
+   SKYFLOW_VAULT_URL=https://your-vault-url
    SKYFLOW_PAT_TOKEN=eyJhbGci...your-pat-token
    SKYFLOW_VAULT_ID=your-vault-id
    ```
