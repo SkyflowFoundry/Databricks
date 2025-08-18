@@ -2,6 +2,23 @@
 
 This solution provides secure data tokenization and detokenization capabilities in Databricks Unity Catalog to protect PII and other sensitive data using Skyflow's Data Privacy Vault services. Built with pure SQL UDFs using Unity Catalog HTTP connections for maximum performance and seamless integration with column-level security.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+    - [Flow Overview](#flow-overview)
+    - [Key Components](#key-components)
+- [Configuration](#configuration)
+    - [Prerequisites](#prerequisites)
+    - [Databricks Permissions Required](#databricks-permissions-required)
+    - [Project Structure](#project-structure)
+    - [Environment Variables (.env.local)](#environment-variables-envlocal)
+- [Development](#development)
+    - [Adding New PII Columns](#adding-new-pii-columns)
+    - [CLI Features](#cli-features)
+    - [Dashboard Integration](#dashboard-integration)
+    - [Cleanup](#cleanup)
+
 ## Demo
 
 A demonstration of this solution was featured in the 'From PII to GenAI: Architecting for Data Privacy & Security in 2025' webinar.
@@ -140,26 +157,28 @@ python setup.py destroy demo
 python setup.py --help
 ```
 
-## Prerequisites
+## Configuration
+
+### Prerequisites
 
 1. **Databricks Unity Catalog** with account-level groups configured
 2. **Skyflow Account** with valid PAT token and configured vault
 
-## Databricks Permissions Required
+### Databricks Permissions Required
 
 The user running this solution needs the following Databricks permissions:
 
-### **Account-Level Permissions**
+#### Account-Level Permissions
 - **Account Admin** OR **Metastore Admin** (to create catalogs and manage Unity Catalog resources)
 
-### **Workspace-Level Permissions**
+#### Workspace-Level Permissions
 | Permission | Purpose | Required For |
 |------------|---------|--------------|
 | **Create Cluster/SQL Warehouse** | Job execution | Tokenization notebook runs |
 | **Manage Secrets** | Secret scope management | Creating `skyflow-secrets` scope |
 | **Workspace Admin** | Resource management | Creating notebooks, dashboards |
 
-### **Unity Catalog Permissions**
+#### Unity Catalog Permissions
 | Resource | Permission | Purpose |
 |----------|------------|---------|
 | **Metastore** | `CREATE CATALOG` | Creating `{prefix}_catalog` |
@@ -167,20 +186,20 @@ The user running this solution needs the following Databricks permissions:
 | **Schema** | `USE SCHEMA`, `CREATE TABLE`, `CREATE FUNCTION` | Table and UDF creation |
 | **External Locations** | `CREATE CONNECTION` | HTTP connections for Skyflow API |
 
-### **Required Account Groups**
+#### Required Account Groups
 The solution references these account-level groups (create before deployment):
 - `auditor` - Users who see detokenized (plain text) data
 - `customer_service` - Users who see masked data (e.g., `J****an`)
 - `marketing` - Users who see only tokens
 
-### **PAT Token Permissions**
+#### PAT Token Permissions
 Your Databricks PAT token must have:
 - **Workspace access** (read/write)
 - **Unity Catalog access** (manage catalogs, schemas, functions)
 - **SQL Warehouse access** (execute statements)
 - **Secrets management** (create/manage secret scopes)
 
-### **Minimum Setup Command**
+#### Minimum Setup Command
 ```bash
 # Grant necessary permissions (run as Account Admin)
 databricks account groups create --display-name "auditor" 
@@ -191,7 +210,7 @@ databricks account groups create --display-name "marketing"
 databricks account groups add-member --group-name "auditor" --user-name "user@company.com"
 ```
 
-### **Permission Validation**
+#### Permission Validation
 Test your permissions before deployment:
 ```bash
 # Test configuration and permissions
@@ -204,7 +223,7 @@ python setup.py config-test
 # - Required file permissions
 ```
 
-### **Common Permission Issues**
+#### Common Permission Issues
 | Error | Cause | Solution |
 |-------|--------|----------|
 | `PERMISSION_DENIED: User does not have CREATE CATALOG` | Missing metastore admin rights | Grant `Metastore Admin` or `Account Admin` |
@@ -212,7 +231,7 @@ python setup.py config-test
 | `PERMISSION_DENIED: CREATE CONNECTION` | Missing connection permissions | Ensure Unity Catalog `CREATE CONNECTION` permission |
 | `Group 'auditor' not found` | Missing account groups | Create account-level groups first |
 
-## Project Structure
+### Project Structure
 
 ```text
 skyflow_databricks/          # Main Python package
@@ -225,8 +244,6 @@ skyflow_databricks/          # Main Python package
     ├── notebooks/           # Serverless tokenization notebook
     └── dashboards/          # Pre-built analytics dashboard
 ```
-
-## Configuration
 
 ### Environment Variables (.env.local)
 
@@ -250,7 +267,7 @@ MASKED_GROUPS=customer_service      # See masked data (e.g., J****an)
 REDACTED_GROUPS=marketing           # See tokens only
 ```
 
-### Unity Catalog Setup
+#### Unity Catalog Setup
 
 The solution creates these UC resources:
 
@@ -260,7 +277,7 @@ The solution creates these UC resources:
 - **Functions**: Pure SQL UDFs for tokenization/detokenization
 - **Column Masks**: Applied to sensitive columns only
 
-## Development Guide
+## Development
 
 ### Adding New PII Columns
 
@@ -268,18 +285,18 @@ The solution creates these UC resources:
 2. **Add column masks**: Edit `skyflow_databricks/templates/sql/setup/apply_column_masks.sql`
 3. **Redeploy**: `python setup.py recreate demo`
 
-### CLI Features
+#### CLI Features
 
 - **Databricks SDK Integration**: Uses official SDK methods instead of raw API calls
 - **Better Error Handling**: Detailed error messages and automatic retry logic
 - **Progress Indicators**: Visual progress bars for long-running operations
 - **Rich Output**: Colored, formatted output for better readability
 
-## Dashboard Integration
+### Dashboard Integration
 
 The included dashboard demonstrates real-time role-based data access with customer insights, purchase patterns, and consent tracking. The dashboard URL is provided after setup completion.
 
-## Cleanup
+### Cleanup
 
 ```bash
 python setup.py destroy demo
