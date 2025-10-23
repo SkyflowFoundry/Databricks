@@ -307,7 +307,7 @@ Removes all UC resources: catalog, connections, secrets, functions, column masks
 ## Support
 
 - **Skyflow Documentation**: [docs.skyflow.com](https://docs.skyflow.com)
-- **Databricks Unity Catalog**: [docs.databricks.com/unity-catalog](https://docs.databricks.com/unity-catalog/)
+- **Databricks Unity Catalog**: [docs.databricks.com/unity-catalog](https://www.databricks.com/product/data-governance)
 - **GitHub Issues**: Please use the repository issue tracker
 
 ## License
